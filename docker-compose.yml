@@ -1,0 +1,100 @@
+version: '3.8'
+
+services:
+  # ===== INFRASTRUKTUR =====
+  postgres:
+    image: postgres:latest
+    container_name: postgres-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq-broker
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ===== SERVICES =====
+  auth-service:
+    build: ./auth-service
+    container_name: auth-service
+    ports:
+      - "9000:9000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/authdb
+
+  user-service:
+    build: ./user-service
+    container_name: user-service
+    ports:
+      - "8081:8081"
+      - "9090:9090"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/userdb
+      GRPC_SERVER_PORT: 9090
+
+  message-service:
+    build: ./message-service
+    container_name: message-service
+    ports:
+      - "8082:8082"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/messagedb
+      SPRING_RABBITMQ_HOST: rabbitmq
+      GRPC_CLIENT_USER_SERVICE_ADDRESS: static://user-service:9090
+
+  bff:
+    build: ./bff
+    container_name: bff
+    ports:
+      - "8080:8080"
+    depends_on:
+      - auth-service
+      - user-service
+      - message-service
+    environment:
+      SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_AUTHSERVICE_ISSUER_URI: http://auth-service:9000
+
+  bot-service:
+    build: ./bot-service
+    container_name: bot-service
+    ports:
+      - "8083:8083"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      message-service:
+        condition: service_started
+    environment:
+      SPRING_RABBITMQ_HOST: rabbitmq
+
+volumes:
+  postgres-data:
