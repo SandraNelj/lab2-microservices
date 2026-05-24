@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <title>Microservices Chat</title>
+    <style>
+        body { font-family: Arial; max-width: 600px; margin: 40px auto; }
+        #login, #chat { display: none; }
+        #messages { border: 1px solid #ccc; height: 300px; overflow-y: scroll; padding: 10px; margin: 10px 0; }
+        .msg { margin: 5px 0; }
+        input, button { padding: 8px; margin: 5px; }
+        button { cursor: pointer; }
+    </style>
+</head>
+<body>
+<h1>Microservices Chat</h1>
+
+<div id="login">
+    <h2>Logga in</h2>
+    <input type="text" id="username" placeholder="Användarnamn">
+    <input type="password" id="password" placeholder="Lösenord">
+    <button onclick="login()">Logga in</button>
+    <p id="loginError" style="color:red;"></p>
+</div>
+
+<div id="chat">
+    <h2>Chatt - Inloggad som: <span id="currentUser"></span></h2>
+    <button onclick="logout()">Logga ut</button>
+    <div id="messages"></div>
+    <input type="text" id="messageInput" placeholder="Skriv ett meddelande...">
+    <button onclick="sendMessage()">Skicka</button>
+</div>
+
+<script>
+    let token = '';
+    let currentUsername = '';
+
+    function showLogin() {
+        document.getElementById('login').style.display = 'block';
+        document.getElementById('chat').style.display = 'none';
+    }
+
+    function showChat() {
+        document.getElementById('login').style.display = 'none';
+        document.getElementById('chat').style.display = 'block';
+        document.getElementById('currentUser').textContent = currentUsername;
+        loadMessages();
+        setInterval(loadMessages, 2000);
+    }
+
+    async function login() {
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+
+        try {
+            const response = await fetch('http://localhost:9000/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+
+            const data = await response.json();
+
+            if (data.access_token) {
+                token = data.access_token;
+                currentUsername = username;
+                showChat();
+            } else {
+                document.getElementById('loginError').textContent = 'Felaktiga uppgifter';
+            }
+        } catch (error) {
+            document.getElementById('loginError').textContent = 'Kunde inte ansluta till servern';
+        }
+    }
+
+    function logout() {
+        token = '';
+        currentUsername = '';
+        document.getElementById('username').value = '';
+        document.getElementById('password').value = '';
+        showLogin();
+    }
+
+    async function sendMessage() {
+        const content = document.getElementById('messageInput').value;
+        if (!content) return;
+
+        try {
+            await fetch('http://localhost:8082/api/messages', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token
+                },
+                body: JSON.stringify({
+                    content: content,
+                    username: currentUsername
+                })
+            });
+
+            document.getElementById('messageInput').value = '';
+            await loadMessages();
+        } catch (error) {
+            console.error('Kunde inte skicka meddelande:', error);
+        }
+    }
+
+    async function loadMessages() {
+        try {
+            const response = await fetch('http://localhost:8082/api/messages', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+
+            const messages = await response.json();
+            const messagesDiv = document.getElementById('messages');
+
+            const wasAtBottom = messagesDiv.scrollHeight - messagesDiv.scrollTop === messagesDiv.clientHeight;
+
+            messagesDiv.innerHTML = '';
+
+
+            const seen = new Set();
+            const uniqueMessages = [];
+
+            for (const msg of messages) {
+                const key = msg.id + ':' + msg.username + ':' + msg.content;
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    uniqueMessages.push(msg);
+                }
+            }
+
+            uniqueMessages.reverse().forEach(msg => {
+                const div = document.createElement('div');
+                div.className = 'msg';
+
+                if (msg.username === 'Bot') {
+                    div.innerHTML = `🤖 <strong>${msg.username}</strong>: <em>${msg.content}</em>`;
+                    div.style.color = '#8B008B';
+                } else {
+                    div.innerHTML = `👤 <strong>${msg.username}</strong>: ${msg.content}`;
+                }
+
+                messagesDiv.appendChild(div);
+            });
+
+            if (wasAtBottom) {
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            }
+        } catch (error) {
+            console.error('Kunde inte hämta meddelanden:', error);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('messageInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') sendMessage();
+        });
+    });
+
+    setInterval(function() {
+        if (token) {
+            console.log('Auto-updatering aktiv...');
+        }
+    }, 5000);
+
+    showLogin();
+</script>
+</body>
+</html>
