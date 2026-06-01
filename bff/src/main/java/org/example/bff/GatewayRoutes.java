@@ -19,6 +19,7 @@ public class GatewayRoutes {
         return route()
                 .GET("/", request -> ServerResponse.ok()
                         .contentType(MediaType.TEXT_HTML)
+                        .header("Content-Type", "text/html; charset=utf-8")
                         .body("""
                     <!DOCTYPE html>
                     <html>
@@ -58,7 +59,9 @@ public class GatewayRoutes {
         return route()
                 .GET("/api/users/**", http())
                 .POST("/api/users", http())
-                .before(uri("http://localhost:8081/"))
+                .PUT("/api/users/**", http())
+                .DELETE("/api/users/**", http())
+                .before(uri("http://user-service:8081/"))
                 .filter(tokenRelay())
                 .build();
     }
@@ -69,7 +72,7 @@ public class GatewayRoutes {
         return route()
                 .GET("/api/messages/**", http())
                 .POST("/api/messages", http())
-                .before(uri("http://localhost:8082/"))
+                .before(uri("http://message-service:8082/"))
                 .filter(tokenRelay())
                 .build();
     }
