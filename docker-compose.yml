@@ -1,9 +1,7 @@
-version: '3.8'
-
 services:
   # ===== INFRASTRUKTUR =====
   postgres:
-    image: postgres:latest
+    image: postgres:16
     container_name: postgres-db
     environment:
       POSTGRES_USER: postgres

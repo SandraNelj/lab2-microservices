@@ -11,8 +11,8 @@ import java.util.Map;
 @Component
 public class MessageBot {
 
-    private final RestClient messageClient = RestClient.create("http://localhost:8082");
-    private final RestClient authClient = RestClient.create("http://localhost:9000");
+    private final RestClient messageClient = RestClient.create("http://message-service:8082");
+    private final RestClient authClient = RestClient.create("http://auth-service:9000");
 
     @RabbitListener(queues = "message.queue")
     public void handleMessage(String message) {
@@ -43,7 +43,7 @@ public class MessageBot {
         } else if (message.contains("hjälp") || message.contains("help")) {
             return "Tillgängliga kommandon: hej, tid, väder, tack";
         } else if (message.contains("tid") || message.contains("klockan")) {
-            return "Klockan är " + LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"));
+            return "Klockan är " + LocalTime.now().plusHours(2).format(DateTimeFormatter.ofPattern("HH:mm:ss"));
         } else if (message.contains("väder")) {
             return "Det är molnigt med chans för mikroservicear! ☁️";
         } else if (message.contains("tack")) {

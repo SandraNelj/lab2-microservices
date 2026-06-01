@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bff
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bff
+  template:
+    metadata:
+      labels:
+        app: bff
+    spec:
+      containers:
+      - name: bff
+        image: lab2-microservices-bff:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8080

@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bot-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bot-service
+  template:
+    metadata:
+      labels:
+        app: bot-service
+    spec:
+      containers:
+      - name: bot-service
+        image: lab2-microservices-bot-service:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8083
