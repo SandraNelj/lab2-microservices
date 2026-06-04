@@ -3,7 +3,6 @@ package org.example.botservice;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
-
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
