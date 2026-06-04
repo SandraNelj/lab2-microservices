@@ -1,12 +1,10 @@
 package org.example.bff;
-
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
 import org.springframework.web.servlet.function.RouterFunction;
 import org.springframework.web.servlet.function.ServerResponse;
 import static org.springframework.cloud.gateway.server.mvc.filter.BeforeFilterFunctions.uri;
-import static org.springframework.cloud.gateway.server.mvc.filter.TokenRelayFilterFunctions.tokenRelay;
 import static org.springframework.cloud.gateway.server.mvc.handler.HandlerFunctions.http;
 import static org.springframework.web.servlet.function.RouterFunctions.route;
 
@@ -62,7 +60,6 @@ public class GatewayRoutes {
                 .PUT("/api/users/**", http())
                 .DELETE("/api/users/**", http())
                 .before(uri("http://user-service:8081/"))
-                .filter(tokenRelay())
                 .build();
     }
 
@@ -73,7 +70,6 @@ public class GatewayRoutes {
                 .GET("/api/messages/**", http())
                 .POST("/api/messages", http())
                 .before(uri("http://message-service:8082/"))
-                .filter(tokenRelay())
                 .build();
     }
 }
